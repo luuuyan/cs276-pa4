@@ -94,8 +94,8 @@ public class PointwiseLearner extends Learner {
 		int totalCount = 0;
 
 		try {
-			Map<Query, List<Document>> trainData;
-			trainData = Util.loadTrainData(test_data_file);			
+			Map<Query, List<Document>> testData;
+			testData = Util.loadTrainData(test_data_file);			
 			
 			Instances dataset = null;
 			
@@ -107,16 +107,16 @@ public class PointwiseLearner extends Learner {
 			attributes.add(new Attribute("header_w"));
 			attributes.add(new Attribute("anchor_w"));
 			attributes.add(new Attribute("relevance_score"));
-			dataset = new Instances("train_dataset", attributes, 0);
+			dataset = new Instances("test_dataset", attributes, 0);
 			
 			/* Add data */
 			
 			// TO Do: add data to the instances
-			for (Query q : trainData.keySet()){
+			for (Query q : testData.keySet()){
 				if (!indexMap.containsKey(q.query)){
 					indexMap.put(q.query, new HashMap<String, Integer>());
 				}
-				for (Document d : trainData.get(q)){
+				for (Document d : testData.get(q)){
 					double[] values = new double[6];
 					double[] tdidfs = AScorer.getTdIdf(d, q, idfs);
 					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
