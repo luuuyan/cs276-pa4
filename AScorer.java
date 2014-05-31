@@ -9,7 +9,7 @@ import java.util.Map;
 
 
 
-public class AScorer 
+public abstract class AScorer 
 {
 	
 	Map<String,Double> idfs;
@@ -22,7 +22,7 @@ public class AScorer
 	}
 	
 	//scores each document for each query
-//	public abstract double getSimScore(Document d, Query q);
+	public abstract double getSimScore(Document d, Query q);
 	
 	//handle the query vector
 	public Map<String,Double> getQueryFreqs(Query q)
@@ -212,7 +212,8 @@ public class AScorer
 			
 			if (tfFromDocField.containsKey(queryL)){
 //				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
-				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * Math.log(idf);
+//				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * Math.log(idf);
+				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * idf;
 
 //				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
 

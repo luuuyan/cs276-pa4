@@ -1,4 +1,4 @@
-package edu.stanford.cs276;
+package cs276.pa4;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -157,7 +157,7 @@ public class BM25Scorer extends AScorer
 			String queryL = query.toLowerCase();
 			double idf;
 			if (idfs.get(queryL) == null){
-				idf = Math.log(idfs.get(LoadHandler.TotalCount) + 1);
+				idf = Math.log(idfs.get("__TotalCount__") + 1);
 			}else{
 				idf = idfs.get(queryL);
 			}
