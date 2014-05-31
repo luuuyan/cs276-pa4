@@ -14,7 +14,7 @@ public class AScorer
 	
 	Map<String,Double> idfs;
 	static String[] TFTYPES = {"url","title","body","header","anchor"};
-	int smoothingBodyLength = 500;
+	static int smoothingBodyLength = 500;
 	
 	public AScorer(Map<String,Double> idfs)
 	{
@@ -186,20 +186,20 @@ public class AScorer
 		double[] tdIdf = new double[5];
 
 		if (d.url != null)
-			tdIdf[0] = getTfIdfForField(getGenTermFreqs(d.url),idfs,q);
+			tdIdf[0] = getTfIdfForField(getGenTermFreqs(d.url),idfs,q, d);
 		if (d.title != null)
-			tdIdf[1] = getTfIdfForField(getGenTermFreqs(d.title),idfs,q);
+			tdIdf[1] = getTfIdfForField(getGenTermFreqs(d.title),idfs,q, d);
 		if (d.headers != null)	
-			tdIdf[2] = getTfIdfForField(getHeaderTermFreqs(d.headers),idfs,q);
+			tdIdf[2] = getTfIdfForField(getHeaderTermFreqs(d.headers),idfs,q, d);
 		if (d.anchors != null)
-			tdIdf[3] = getTfIdfForField(getAnchorTermFreqs(d.anchors),idfs,q);
+			tdIdf[3] = getTfIdfForField(getAnchorTermFreqs(d.anchors),idfs,q, d);
 		if (d.body_hits != null)
-			tdIdf[4] = getTfIdfForField(getBodyTermFreqs(d.body_hits),idfs,q);
+			tdIdf[4] = getTfIdfForField(getBodyTermFreqs(d.body_hits),idfs,q, d);
 
 		return tdIdf;
 	}
 	
-	public static double getTfIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> dfs, Query q){
+	public static double getTfIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> dfs, Query q, Document d){
 		double score = 0.0;
 		for (String queryword : q.words) {
 			String queryL = queryword.toLowerCase();
@@ -212,7 +212,9 @@ public class AScorer
 			
 			if (tfFromDocField.containsKey(queryL)){
 //				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
-				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
+				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * Math.log(idf);
+
+//				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
 
 			}
 		}
@@ -220,7 +222,7 @@ public class AScorer
 	}
 
 	
-	private double tfSmooth(double tf, Document d) {
+	private static double tfSmooth(double tf, Document d) {
 		int length = d.body_length + smoothingBodyLength;
 
 		if (tf > 0)
