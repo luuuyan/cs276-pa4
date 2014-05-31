@@ -180,38 +180,40 @@ public class AScorer
 	}
 	
 	// Note: add two new functions for pa4
-	public static double[] getTdIdf(Document d, Query q,  Map<String, Double> idfs)
+	public static double[] getTfIdf(Document d, Query q,  Map<String, Double> idfs)
 	{
 		// tdIdf stores tdIdf w.r.t to 5 fields using raw td
 		double[] tdIdf = new double[5];
 
 		if (d.url != null)
-			tdIdf[0] = getTdIdfForField(getGenTermFreqs(d.url),idfs,q);
+			tdIdf[0] = getTfIdfForField(getGenTermFreqs(d.url),idfs,q);
 		if (d.title != null)
-			tdIdf[1] = getTdIdfForField(getGenTermFreqs(d.title),idfs,q);
+			tdIdf[1] = getTfIdfForField(getGenTermFreqs(d.title),idfs,q);
 		if (d.headers != null)	
-			tdIdf[2] = getTdIdfForField(getHeaderTermFreqs(d.headers),idfs,q);
+			tdIdf[2] = getTfIdfForField(getHeaderTermFreqs(d.headers),idfs,q);
 		if (d.anchors != null)
-			tdIdf[3] = getTdIdfForField(getAnchorTermFreqs(d.anchors),idfs,q);
+			tdIdf[3] = getTfIdfForField(getAnchorTermFreqs(d.anchors),idfs,q);
 		if (d.body_hits != null)
-			tdIdf[4] = getTdIdfForField(getBodyTermFreqs(d.body_hits),idfs,q);
+			tdIdf[4] = getTfIdfForField(getBodyTermFreqs(d.body_hits),idfs,q);
 
 		return tdIdf;
 	}
 	
-	public static double getTdIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> idfs, Query q){
+	public static double getTfIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> idfs, Query q){
 		double score = 0.0;
 		for (String queryword : q.words) {
 			String queryL = queryword.toLowerCase();
 			double idf;
 			if (idfs.get(queryL) == null){
-				idf = Math.log(idfs.size() + 1); // small modification, need to check
+				idf = idfs.size() + 1; // small modification, need to check
 			}else{
 				idf = idfs.get(queryL);
 			}
 			
 			if (tfFromDocField.containsKey(queryL)){
 				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
+//				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
+
 			}
 		}
 		return score;

@@ -51,7 +51,7 @@ public class PointwiseLearner extends Learner {
 			for (Query q : trainData.keySet()){
 				for (Document d : trainData.get(q)){
 					double[] values = new double[6];
-					double[] tdidfs = AScorer.getTdIdf(d, q, idfs);
+					double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
 					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
 					values[5] = relData.get(q.toString().toLowerCase()).get(d.url);
 					// add data
@@ -118,7 +118,7 @@ public class PointwiseLearner extends Learner {
 				}
 				for (Document d : testData.get(q)){
 					double[] values = new double[6];
-					double[] tdidfs = AScorer.getTdIdf(d, q, idfs);
+					double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
 					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
 					values[5] = -1.0; // relevance score not used in prediction
 					
