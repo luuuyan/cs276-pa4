@@ -25,7 +25,9 @@ public class Learning2Rank {
 			learner = new PointwiseLearner();
 		} else if (task == 2) {
 		  boolean isLinearKernel = true;
-			learner = new PairwiseLearner(isLinearKernel);
+//			learner = new PairwiseLearner(isLinearKernel);
+			learner = new PairwiseLearner(Math.pow(2, -3), Math.pow(2, -7), isLinearKernel);
+
 		} else if (task == 3) {
 			
 			/* 

@@ -199,20 +199,20 @@ public class AScorer
 		return tdIdf;
 	}
 	
-	public static double getTfIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> idfs, Query q){
+	public static double getTfIdfForField(Map<String, Integer> tfFromDocField, Map<String, Double> dfs, Query q){
 		double score = 0.0;
 		for (String queryword : q.words) {
 			String queryL = queryword.toLowerCase();
 			double idf;
-			if (idfs.get(queryL) == null){
-				idf = idfs.size() + 1; // small modification, need to check
+			if (dfs.get(queryL) == null){
+				idf = dfs.size() + 1; // small modification, need to check
 			}else{
-				idf = idfs.get(queryL);
+				idf = (double) (dfs.size() + 1) / (dfs.get(queryL) + 1);
 			}
 			
 			if (tfFromDocField.containsKey(queryL)){
-				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
-//				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
+//				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
+				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
 
 			}
 		}
