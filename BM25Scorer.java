@@ -9,13 +9,19 @@ import java.util.Set;
 
 public class BM25Scorer extends AScorer
 {
-	Map<Query,Map<String, Document>> queryDict;
+	Map<Query, List<Document>> queryDict;
+	private int numDocuments;
 	
-	public BM25Scorer(Map<String,Double> idfs,Map<Query,Map<String, Document>> queryDict)
+	public BM25Scorer(Map<String,Double> idfs, Map<Query, List<Document>> queryDict)
 	{
 		super(idfs);
 		this.queryDict = queryDict;
 		this.calcAverageLengths();
+		Set<Document> docs = new HashSet<Document>();
+		for (Query q : queryDict.keySet()) {
+			docs.addAll(queryDict.get(q));
+		}
+		numDocuments = docs.size();
 	}
 
 	
@@ -65,10 +71,9 @@ public class BM25Scorer extends AScorer
     	int totalDocCount = 0;
     	
     	for (Query query: queryDict.keySet()){
-    		for (String url : queryDict.get(query).keySet()){
+    		for (Document doc : queryDict.get(query)){
     			totalDocCount ++;
     			
-    			Document doc = queryDict.get(query).get(url);
 				double urlLength = getGenLength(doc.url);
 				double titleLength = getGenLength(doc.title);
 				double bodyLength = getBodyLength(doc);
@@ -157,7 +162,7 @@ public class BM25Scorer extends AScorer
 			String queryL = query.toLowerCase();
 			double idf;
 			if (idfs.get(queryL) == null){
-				idf = Math.log(idfs.get("__TotalCount__") + 1);
+				idf = Math.log(numDocuments + 1);
 			}else{
 				idf = idfs.get(queryL);
 			}
@@ -172,7 +177,7 @@ public class BM25Scorer extends AScorer
 			score += docTf * idf / (k1 + docTf);
 		}
 		
-		score += pageRankLambda * pagerankScores.get(d);
+//		score += pageRankLambda * pagerankScores.get(d);
 		
 //		System.out.println(d);
 //		System.out.println("score = " + score);

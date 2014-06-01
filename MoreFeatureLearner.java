@@ -2,7 +2,6 @@ package cs276.pa4;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.Set;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.LibSVM;
-import weka.classifiers.functions.LinearRegression;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
@@ -20,35 +18,33 @@ import weka.core.SelectedTag;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Standardize;
 
-public class PairwiseLearner extends Learner {
+public class MoreFeatureLearner extends Learner {
   private LibSVM model;
-  public PairwiseLearner(boolean isLinearKernel){
-    try{
-      model = new LibSVM();
-    } catch (Exception e){
-      e.printStackTrace();
-    }
-    
-    if(isLinearKernel){
-      model.setKernelType(new SelectedTag(LibSVM.KERNELTYPE_LINEAR, LibSVM.TAGS_KERNELTYPE));
-    }
-  }
+  private BM25Scorer bm25scorer;
+  private SmallestWindowScorer windowScorer;
   
-  public PairwiseLearner(double C, double gamma, boolean isLinearKernel){
+  public MoreFeatureLearner(Map<String, Double> idf){
     try{
       model = new LibSVM();
     } catch (Exception e){
       e.printStackTrace();
     }
     
-    model.setCost(C);
-    model.setGamma(gamma); // only matter for RBF kernel
-    if(isLinearKernel){
-      model.setKernelType(new SelectedTag(LibSVM.KERNELTYPE_LINEAR, LibSVM.TAGS_KERNELTYPE));
-    }
+    model.setKernelType(new SelectedTag(LibSVM.KERNELTYPE_LINEAR, LibSVM.TAGS_KERNELTYPE));
   }
   
   	final public String separator = "###";
+  	
+  	private static void addAttributes(List<Attribute> attributes) {
+  		attributes.add(new Attribute("url_w"));
+		attributes.add(new Attribute("title_w"));
+		attributes.add(new Attribute("body_w"));
+		attributes.add(new Attribute("header_w"));
+		attributes.add(new Attribute("anchor_w"));
+		attributes.add(new Attribute("bm25"));
+		attributes.add(new Attribute("window"));
+		attributes.add(new Attribute("pagerank"));
+  	}
   	
 	@Override
 	public Instances extract_train_features(String train_data_file,
@@ -61,114 +57,120 @@ public class PairwiseLearner extends Learner {
 		try {
 			originData = Util.loadTrainData(train_data_file);
 			relData = Util.loadRelData(train_rel_file);
-			
-			// first build originInstances
-			ArrayList<Attribute> origin_attributes = new ArrayList<Attribute>();
-			origin_attributes.add(new Attribute("url_w"));
-			origin_attributes.add(new Attribute("title_w"));
-			origin_attributes.add(new Attribute("body_w"));
-			origin_attributes.add(new Attribute("header_w"));
-			origin_attributes.add(new Attribute("anchor_w"));
-			origin_attributes.add(new Attribute("rel_score"));
-			Instances originInstances = new Instances("origin_dataset", origin_attributes, 0);
-
-			// originIndexMap query -> url -> index in originInstances/normalizeInstances
-			Map<String, Map<String, Integer>> originIndexMap = new HashMap<String, Map<String, Integer>>();
-			int countInOriginInstances = 0;
-			
-			// add data
-			for (Query q : originData.keySet()){
-				originIndexMap.put(q.query, new HashMap<String, Integer>());
-				for (Document d : originData.get(q)){
-					double[] values = new double[6];
-					double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
-					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
-					values[5] = relData.get(q.toString().toLowerCase()).get(d.url);
-					// add data
-					Instance inst = new DenseInstance(1.0, values);
-					originInstances.add(inst);
-					// record in originIndexMap
-					originIndexMap.get(q.query).put(d.url, countInOriginInstances);
-					countInOriginInstances ++;
-				}
-			}
-			
-			/* Set last attribute as target */
-			originInstances.setClassIndex(originInstances.numAttributes() - 1);
-			
-			// normalize originInstances and get normalizeInstances
-			Standardize filter = new Standardize();
-			filter.setInputFormat(originInstances);
-			Instances normalizeInstances = Filter.useFilter(originInstances, filter);
-			normalizeInstances.setClassIndex(originInstances.numAttributes() - 1);
-
-			
-			// use normalizeInstances to derive trainInstances (with different of tfidf as features)
-			Instances trainInstances = null;
-			
-			/* Build attributes list */
-			ArrayList<Attribute> attributes = new ArrayList<Attribute>();
-			attributes.add(new Attribute("url_w"));
-			attributes.add(new Attribute("title_w"));
-			attributes.add(new Attribute("body_w"));
-			attributes.add(new Attribute("header_w"));
-			attributes.add(new Attribute("anchor_w"));		
-			// label: +1 or -1
-			ArrayList<String> labels = new ArrayList<String>();
-			labels.add("+1");
-			labels.add("-1");
-			attributes.add(new Attribute("diff_rel_score", labels));
-			trainInstances = new Instances("train_dataset", attributes, 0);
-			
-			/* Add data */
-			for (Query q : originData.keySet()){
-				int docSize = originData.get(q).size();
-				for (int i = 0; i < docSize - 1; i++){
-					for (int j = i + 1; j < docSize; j++){
-						double[] values1 = new double[6];
-						double[] values2 = new double[6];
-						String d1 = originData.get(q).get(i).url;
-						String d2 = originData.get(q).get(j).url;
-						Instance i1 = normalizeInstances.instance(originIndexMap.get(q.query).get(d1));
-						Instance i2 = normalizeInstances.instance(originIndexMap.get(q.query).get(d2));
-
-						// features xi - xj
-						for (int k = 0; k < 6; k++){
-							values1[k] = i1.value(k) - i2.value(k);
-							values2[k] = i2.value(k) - i1.value(k);
-						}
-
-						// diff rel score +1 or -1
-						if (values1[5] > 0){
-							values1[5] = trainInstances.attribute(5).indexOfValue("+1");
-							values2[5] = trainInstances.attribute(5).indexOfValue("-1");
-						}else {
-							values1[5] = trainInstances.attribute(5).indexOfValue("-1");
-							values2[5] = trainInstances.attribute(5).indexOfValue("+1");
-						}
-						// add data
-						Instance inst1 = new DenseInstance(1.0, values1);
-						Instance inst2 = new DenseInstance(1.0, values2);
-						trainInstances.add(inst1);
-						trainInstances.add(inst2);
-					}
-				}	
-			}
-			
-			/* Set last attribute as target */
-			trainInstances.setClassIndex(trainInstances.numAttributes() - 1);
-			
-			
-//			System.out.println("before normalized instances: " + dataset.toString());
-//			System.out.println("normalized instances: " + standardize_X.toString());
-			return trainInstances;
-
-//			return dataset;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}
+		
+		bm25scorer = new BM25Scorer(idfs, originData);
+		windowScorer = new SmallestWindowScorer(idfs, originData);
+			
+		// first build originInstances
+		ArrayList<Attribute> origin_attributes = new ArrayList<Attribute>();
+		addAttributes(origin_attributes);
+		origin_attributes.add(new Attribute("rel_score"));
+		Instances originInstances = new Instances("origin_dataset", origin_attributes, 0);
+
+		// originIndexMap query -> url -> index in originInstances/normalizeInstances
+		Map<String, Map<String, Integer>> originIndexMap = new HashMap<String, Map<String, Integer>>();
+		int countInOriginInstances = 0;
+		int numAttributes = originInstances.numAttributes();
+		
+		// add data
+		for (Query q : originData.keySet()){
+			originIndexMap.put(q.query, new HashMap<String, Integer>());
+			for (Document d : originData.get(q)){
+				double[] values = new double[numAttributes];
+				double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
+				System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
+				values[5] = bm25scorer.getSimScore(d, q);
+				values[6] = windowScorer.getSimScore(d, q);
+				values[7] = d.page_rank;
+				values[numAttributes-1] = relData.get(q.toString().toLowerCase()).get(d.url);
+				// add data
+				Instance inst = new DenseInstance(1.0, values);
+				originInstances.add(inst);
+				// record in originIndexMap
+				originIndexMap.get(q.query).put(d.url, countInOriginInstances);
+				countInOriginInstances ++;
+			}
+		}
+		
+		/* Set last attribute as target */
+		originInstances.setClassIndex(originInstances.numAttributes() - 1);
+		
+		// normalize originInstances and get normalizeInstances
+		Standardize filter = new Standardize();
+		Instances normalizeInstances = null;
+		try {
+			filter.setInputFormat(originInstances);
+			normalizeInstances = Filter.useFilter(originInstances, filter);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		normalizeInstances.setClassIndex(originInstances.numAttributes() - 1);
+
+		
+		// use normalizeInstances to derive trainInstances (with different of tfidf as features)
+		Instances trainInstances = null;
+		
+		/* Build attributes list */
+		ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+		addAttributes(attributes);
+		// label: +1 or -1
+		ArrayList<String> labels = new ArrayList<String>();
+		labels.add("+1");
+		labels.add("-1");
+		attributes.add(new Attribute("diff_rel_score", labels));
+		trainInstances = new Instances("train_dataset", attributes, 0);
+		
+		/* Add data */
+		for (Query q : originData.keySet()){
+			int docSize = originData.get(q).size();
+			for (int i = 0; i < docSize - 1; i++){
+				for (int j = i + 1; j < docSize; j++){
+					double[] values1 = new double[numAttributes];
+					double[] values2 = new double[numAttributes];
+					String d1 = originData.get(q).get(i).url;
+					String d2 = originData.get(q).get(j).url;
+					Instance i1 = normalizeInstances.instance(originIndexMap.get(q.query).get(d1));
+					Instance i2 = normalizeInstances.instance(originIndexMap.get(q.query).get(d2));
+
+					// features xi - xj
+					for (int k = 0; k < numAttributes; k++){
+						values1[k] = i1.value(k) - i2.value(k);
+						values2[k] = i2.value(k) - i1.value(k);
+					}
+
+					// diff rel score +1 or -1
+					int predidx = numAttributes - 1;
+					if (values1[predidx] > 0){
+						values1[predidx] = trainInstances.attribute(predidx).indexOfValue("+1");
+						values2[predidx] = trainInstances.attribute(predidx).indexOfValue("-1");
+					}else {
+						values1[predidx] = trainInstances.attribute(predidx).indexOfValue("-1");
+						values2[predidx] = trainInstances.attribute(predidx).indexOfValue("+1");
+					}
+					// add data
+					Instance inst1 = new DenseInstance(1.0, values1);
+					Instance inst2 = new DenseInstance(1.0, values2);
+					trainInstances.add(inst1);
+					trainInstances.add(inst2);
+				}
+			}	
+		}
+		
+		/* Set last attribute as target */
+		trainInstances.setClassIndex(trainInstances.numAttributes() - 1);
+		
+		
+//			System.out.println("before normalized instances: " + dataset.toString());
+//			System.out.println("normalized instances: " + standardize_X.toString());
+		return trainInstances;
+
+//			return dataset;
 		
 	}
 
@@ -202,29 +204,31 @@ public class PairwiseLearner extends Learner {
 
 		try {
 			Map<Query, List<Document>> originData = Util.loadTrainData(test_data_file);	// origin testdata
+			bm25scorer = new BM25Scorer(idfs, originData);
+			windowScorer = new SmallestWindowScorer(idfs, originData);
 			
 			// first build originInstances
 			ArrayList<Attribute> origin_attributes = new ArrayList<Attribute>();
-			origin_attributes.add(new Attribute("url_w"));
-			origin_attributes.add(new Attribute("title_w"));
-			origin_attributes.add(new Attribute("body_w"));
-			origin_attributes.add(new Attribute("header_w"));
-			origin_attributes.add(new Attribute("anchor_w"));
+			addAttributes(origin_attributes);
 			origin_attributes.add(new Attribute("rel_score"));
 			Instances originInstances = new Instances("origin_dataset", origin_attributes, 0);
 
 			// originIndexMap query -> url -> index in originInstances/normalizeInstances
 			Map<String, Map<String, Integer>> originIndexMap = new HashMap<String, Map<String, Integer>>();
 			int countInOriginInstances = 0;
+			int numAttributes = originInstances.numAttributes();
 			
 			// add data
 			for (Query q : originData.keySet()){
 				originIndexMap.put(q.query, new HashMap<String, Integer>());
 				for (Document d : originData.get(q)){
-					double[] values = new double[6];
+					double[] values = new double[numAttributes];
 					double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
 					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
-					values[5] = -1; // not relevant for testing
+					values[5] = bm25scorer.getSimScore(d, q);
+					values[6] = windowScorer.getSimScore(d, q);
+					values[7] = d.page_rank;
+					values[numAttributes-1] = -1; // not relevant for testing
 					// add data
 					Instance inst = new DenseInstance(1.0, values);
 					originInstances.add(inst);
@@ -248,11 +252,7 @@ public class PairwiseLearner extends Learner {
 			
 			/* Build attributes list */
 			ArrayList<Attribute> attributes = new ArrayList<Attribute>();
-			attributes.add(new Attribute("url_w"));
-			attributes.add(new Attribute("title_w"));
-			attributes.add(new Attribute("body_w"));
-			attributes.add(new Attribute("header_w"));
-			attributes.add(new Attribute("anchor_w"));
+			addAttributes(attributes);
 			// label: +1 or -1
 			ArrayList<String> labels = new ArrayList<String>();
 			labels.add("+1");
@@ -269,20 +269,19 @@ public class PairwiseLearner extends Learner {
 				}
 				for (int i = 0; i < originData.get(q).size() - 1; i++){
 					for (int j = i + 1; j < originData.get(q).size(); j++){
-						double[] values1 = new double[6];
-//						double[] values2 = new double[6];
+						double[] values1 = new double[numAttributes];
 						String d1 = originData.get(q).get(i).url;
 						String d2 = originData.get(q).get(j).url;
 						Instance i1 = normalizeInstances.instance(originIndexMap.get(q.query).get(d1));
 						Instance i2 = normalizeInstances.instance(originIndexMap.get(q.query).get(d2));
 
 						// features xi - xj
-						for (int k = 0; k < 6; k++){
+						for (int k = 0; k < numAttributes; k++){
 							values1[k] = i1.value(k) - i2.value(k);
 //							values2[k] = i2.value(k) - i1.value(k);
 						}
 
-						values1[5] = testInstances.attribute(5).indexOfValue("+1"); // non-relevant here
+						values1[numAttributes-1] = testInstances.attribute(numAttributes-1).indexOfValue("+1"); // non-relevant here
 						Instance inst1 = new DenseInstance(1.0, values1);
 						testInstances.add(inst1);
 						
@@ -337,7 +336,7 @@ public class PairwiseLearner extends Learner {
 //					System.out.println("classify result:" + model.classifyInstance(test_dataset.instance(indexMap.get(queryString).get(urls))));
 //					System.out.println("class 1.0 : " + test_dataset.attribute(5).value(1) + "class 0.0 : " + test_dataset.attribute(5).value(0));
 					int result = (int) model.classifyInstance(test_dataset.instance(indexMap.get(queryString).get(urls)));
-					String label = test_dataset.attribute(5).value(result);
+					String label = test_dataset.attribute(test_dataset.numAttributes()-1).value(result);
 					relScoreMap.put(urls, label);
 				}
 				

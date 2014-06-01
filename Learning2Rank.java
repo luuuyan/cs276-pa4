@@ -36,7 +36,7 @@ public class Learning2Rank {
 			/* 
 			 * @TODO: Your code here, add more features 
 			 * */
-			System.err.println("Task 3");
+			learner = new MoreFeatureLearner(idfs);
 			
 		} else if (task == 4) {
 			
@@ -70,7 +70,7 @@ public class Learning2Rank {
 				/* 
 				 * @TODO: Your code here, add more features 
 				 * */
-				System.err.println("Task 3");
+				learner = new MoreFeatureLearner(idfs);
 				
 			} else if (task == 4) {
 				

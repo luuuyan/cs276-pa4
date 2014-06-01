@@ -212,8 +212,8 @@ public abstract class AScorer
 			
 			if (tfFromDocField.containsKey(queryL)){
 //				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * Math.log(idf);
-//				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * Math.log(idf);
-				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * idf;
+				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * Math.log(idf);
+//				score += (double) tfSmooth(tfFromDocField.get(queryL), d) * idf;
 
 //				score += (double) Math.log(1 + tfFromDocField.get(queryL)) * idf;
 
