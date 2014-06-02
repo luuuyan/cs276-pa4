@@ -43,7 +43,7 @@ public class Learning2Rank {
 			/* 
 			 * @TODO: Your code here, extra credit 
 			 * */
-			System.err.println("Extra credit");
+			learner = new SVRLearner();
 			
 		}
  		
@@ -77,7 +77,8 @@ public class Learning2Rank {
 				/* 
 				 * @TODO: Your code here, extra credit 
 				 * */
-				System.err.println("Extra credit");
+				learner = new SVRLearner();
+//				System.err.println("Extra credit");
 				
 			}
 		 
