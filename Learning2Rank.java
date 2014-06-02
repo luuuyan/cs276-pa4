@@ -43,7 +43,8 @@ public class Learning2Rank {
 			/* 
 			 * @TODO: Your code here, extra credit 
 			 * */
-			learner = new SVRLearner();
+//			learner = new SVRLearner();
+			learner = new Extra3Learner(idfs);
 			
 		}
  		
@@ -77,8 +78,8 @@ public class Learning2Rank {
 				/* 
 				 * @TODO: Your code here, extra credit 
 				 * */
-				learner = new SVRLearner();
-//				System.err.println("Extra credit");
+//				learner = new SVRLearner();
+				learner = new Extra3Learner(idfs);
 				
 			}
 		 

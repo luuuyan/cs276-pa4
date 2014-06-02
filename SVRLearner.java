@@ -1,7 +1,6 @@
 package cs276.pa4;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import weka.classifiers.Classifier;
-import weka.classifiers.functions.LinearRegression;
 import weka.classifiers.functions.SMOreg;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -162,8 +160,6 @@ public class SVRLearner extends Learner {
 				for (String url : indexMap.get(queryString).keySet()){
 					int index = indexMap.get(queryString).get(url);
 					double prediction = model.classifyInstance(test_dataset.instance(index));
-//					double prediction = 0.0; // baseline, no model fitted for debug
-//					System.out.println(Arrays.toString(lr_model.coefficients()));
 					Pair<String, Double> urlAndScore = new Pair<String, Double>(url, prediction);
 					urlAndScoreList.add(urlAndScore);
 				}
