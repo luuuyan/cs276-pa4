@@ -44,6 +44,8 @@ public class MoreFeatureLearner extends Learner {
 		attributes.add(new Attribute("bm25"));
 		attributes.add(new Attribute("window"));
 		attributes.add(new Attribute("pagerank"));
+		attributes.add(new Attribute("pdf"));
+		attributes.add(new Attribute("length"));
   	}
   	
 	@Override
@@ -84,9 +86,17 @@ public class MoreFeatureLearner extends Learner {
 				double[] values = new double[numAttributes];
 				double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
 				System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
-				values[5] = bm25scorer.getSimScore(d, q);
+//				values[5] = bm25scorer.getSimScore(d, q);
 				values[6] = windowScorer.getSimScore(d, q);
 				values[7] = d.page_rank;
+				values[8] = d.url.contains(".pdf") ? 1 : 0;
+				if (d.body_length < 100) {
+					values[9] = 0;
+				} else if (d.body_length >= 100 && d.body_length < 500) {
+					values[9] = 1;
+				} else {
+					values[9] = 2;
+				}
 				values[numAttributes-1] = relData.get(q.toString().toLowerCase()).get(d.url);
 				// add data
 				Instance inst = new DenseInstance(1.0, values);
@@ -166,11 +176,7 @@ public class MoreFeatureLearner extends Learner {
 		trainInstances.setClassIndex(trainInstances.numAttributes() - 1);
 		
 		
-//			System.out.println("before normalized instances: " + dataset.toString());
-//			System.out.println("normalized instances: " + standardize_X.toString());
 		return trainInstances;
-
-//			return dataset;
 		
 	}
 
@@ -225,9 +231,17 @@ public class MoreFeatureLearner extends Learner {
 					double[] values = new double[numAttributes];
 					double[] tdidfs = AScorer.getTfIdf(d, q, idfs);
 					System.arraycopy(tdidfs, 0, values, 0, tdidfs.length);
-					values[5] = bm25scorer.getSimScore(d, q);
+//					values[5] = bm25scorer.getSimScore(d, q);
 					values[6] = windowScorer.getSimScore(d, q);
 					values[7] = d.page_rank;
+					values[8] = d.url.contains(".pdf") ? 1 : 0;
+					if (d.body_length < 100) {
+						values[9] = 0;
+					} else if (d.body_length >= 100 && d.body_length < 500) {
+						values[9] = 1;
+					} else {
+						values[9] = 2;
+					}
 					values[numAttributes-1] = -1; // not relevant for testing
 					// add data
 					Instance inst = new DenseInstance(1.0, values);
@@ -293,7 +307,6 @@ public class MoreFeatureLearner extends Learner {
 				
 			}
 			
-//			System.out.println("+1 index : " + testInstances.attribute(5).indexOfValue("+1") + "-1 index : " + testInstances.attribute(5).indexOfValue("-1"));
 			
 			/* Set last attribute as target */
 			testInstances.setClassIndex(testInstances.numAttributes() - 1);
@@ -333,8 +346,6 @@ public class MoreFeatureLearner extends Learner {
 					docSet.add(urlPair[1]);
 					
 					// add prediction score of this pairs to relScoreMap
-//					System.out.println("classify result:" + model.classifyInstance(test_dataset.instance(indexMap.get(queryString).get(urls))));
-//					System.out.println("class 1.0 : " + test_dataset.attribute(5).value(1) + "class 0.0 : " + test_dataset.attribute(5).value(0));
 					int result = (int) model.classifyInstance(test_dataset.instance(indexMap.get(queryString).get(urls)));
 					String label = test_dataset.attribute(test_dataset.numAttributes()-1).value(result);
 					relScoreMap.put(urls, label);

@@ -177,7 +177,7 @@ public class BM25Scorer extends AScorer
 			score += docTf * idf / (k1 + docTf);
 		}
 		
-//		score += pageRankLambda * pagerankScores.get(d);
+		score += pageRankLambda * pagerankScores.get(d);
 		
 //		System.out.println(d);
 //		System.out.println("score = " + score);
